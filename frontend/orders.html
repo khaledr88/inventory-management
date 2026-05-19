@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purchase Orders — InvMS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">📦</div>
+      <div><div class="brand-name">InvMS</div><div class="brand-sub">COMP344</div></div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="index.html" class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="products.html" class="nav-link"><span class="icon">📦</span> Products</a>
+    <a href="stock.html" class="nav-link"><span class="icon">🏭</span> Stock</a>
+    <div class="nav-section">Procurement</div>
+    <a href="orders.html" class="nav-link active"><span class="icon">🚚</span> Purchase Orders</a>
+    <a href="suppliers.html" class="nav-link"><span class="icon">🏢</span> Suppliers</a>
+    <div class="nav-section">Admin</div>
+    <a href="users.html" class="nav-link"><span class="icon">👥</span> Users & Roles</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">AA</div>
+      <div><div class="user-name">Alice Admin</div><div class="user-role">Administrator</div></div>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Purchase Orders</div>
+      <div class="page-sub">Track orders from suppliers</div>
+    </div>
+    <div class="topbar-actions">
+      <select id="status-filter" onchange="renderOrders()" style="width:150px">
+        <option value="">All Statuses</option>
+        <option>Pending</option><option>Approved</option><option>Received</option><option>Cancelled</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModal()">+ New Order</button>
+    </div>
+  </div>
+  <div class="content page-enter">
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="card-title">🚚 Purchase Orders</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>PO #</th><th>Supplier</th><th>Ordered By</th><th>Warehouse</th><th>Order Date</th><th>Expected</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 Order Items</div>
+        <span class="text-muted" id="items-label">Select an order to view items</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Product</th><th>SKU</th><th>Quantity</th><th>Unit Cost</th><th>Subtotal</th></tr></thead>
+          <tbody id="items-tbody"><tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><p>Click "Items" on an order above</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Purchase Order</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Supplier</label>
+          <select id="f-sup"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Warehouse</label>
+          <select id="f-wh"></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Expected Date</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Amount ($)</label>
+          <input type="number" id="f-amount" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="f-notes" rows="2" placeholder="Optional notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addOrder()">Create Order</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+SUPPLIERS.forEach(s=>{ document.getElementById('f-sup').innerHTML+=`<option value="${s.supplier_id}">${s.company_name}</option>`; });
+WAREHOUSES.forEach(w=>{ document.getElementById('f-wh').innerHTML+=`<option value="${w.warehouse_id}">${w.warehouse_name}</option>`; });
+
+function renderOrders(){
+  const sf = document.getElementById('status-filter').value;
+  const list = PURCHASE_ORDERS.filter(o=>!sf||o.status===sf);
+  const cls={Pending:'pending',Approved:'approved',Received:'received',Cancelled:'cancelled'};
+  document.getElementById('orders-tbody').innerHTML = list.map(o=>{
+    const sup = SUPPLIERS.find(s=>s.supplier_id===o.supplier_id)?.company_name||'—';
+    const usr = USERS.find(u=>u.user_id===o.ordered_by)?.full_name||'—';
+    const wh  = WAREHOUSES.find(w=>w.warehouse_id===o.warehouse_id)?.warehouse_name||'—';
+    return `<tr>
+      <td class="mono">#PO-00${o.po_id}</td>
+      <td>${sup}</td><td>${usr}</td><td>${wh}</td>
+      <td>${o.order_date}</td><td>${o.expected_date}</td>
+      <td><strong>$${o.total_amount.toLocaleString()}</strong></td>
+      <td><span class="badge badge-${cls[o.status]||'pending'}">${o.status}</span></td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" onclick="showItems(${o.po_id})">Items</button>
+          <button class="btn btn-ghost btn-sm" onclick="changeStatus(${o.po_id})">Update</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9"><div class="empty-state"><p>No orders found</p></div></td></tr>';
+}
+
+function showItems(poId){
+  const items = PO_ITEMS.filter(i=>i.po_id===poId);
+  document.getElementById('items-label').textContent = `PO #00${poId} — ${items.length} items`;
+  document.getElementById('items-tbody').innerHTML = items.map(i=>{
+    const p = PRODUCTS.find(x=>x.product_id===i.product_id);
+    return `<tr>
+      <td>${p?.product_name||'—'}</td>
+      <td class="mono">${p?.SKU||'—'}</td>
+      <td>${i.quantity}</td>
+      <td>$${i.unit_cost.toFixed(2)}</td>
+      <td><strong>$${(i.quantity*i.unit_cost).toFixed(2)}</strong></td>
+    </tr>`;
+  }).join('');
+}
+
+function changeStatus(id){
+  const o = PURCHASE_ORDERS.find(x=>x.po_id===id);
+  if(!o) return;
+  const next = {Pending:'Approved',Approved:'Received',Received:'Received',Cancelled:'Cancelled'};
+  o.status = next[o.status]||o.status;
+  renderOrders();
+}
+
+function openModal(){ document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+function addOrder(){
+  const newO = {
+    po_id: PURCHASE_ORDERS.length+1,
+    supplier_id: parseInt(document.getElementById('f-sup').value),
+    ordered_by: 2,
+    warehouse_id: parseInt(document.getElementById('f-wh').value),
+    order_date: new Date().toISOString().split('T')[0],
+    expected_date: document.getElementById('f-date').value,
+    status: 'Pending',
+    total_amount: parseFloat(document.getElementById('f-amount').value)||0
+  };
+  PURCHASE_ORDERS.push(newO);
+  renderOrders();
+  closeModal();
+}
+
+renderOrders();
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — InvMS</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">📦</div>
+      <div>
+        <div class="brand-name">InvMS</div>
+        <div class="brand-sub">COMP344</div>
+      </div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="index.html" class="nav-link active"><span class="icon">⊞</span> Dashboard</a>
+    <a href="products.html" class="nav-link"><span class="icon">📦</span> Products</a>
+    <a href="stock.html" class="nav-link"><span class="icon">🏭</span> Stock</a>
+    <div class="nav-section">Procurement</div>
+    <a href="orders.html" class="nav-link"><span class="icon">🚚</span> Purchase Orders</a>
+    <a href="suppliers.html" class="nav-link"><span class="icon">🏢</span> Suppliers</a>
+    <div class="nav-section">Admin</div>
+    <a href="users.html" class="nav-link"><span class="icon">👥</span> Users & Roles</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">AA</div>
+      <div>
+        <div class="user-name">Alice Admin</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Welcome back, Alice</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="text-muted" id="current-date"></span>
+    </div>
+  </div>
+
+  <div class="content page-enter">
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-top">
+          <div class="metric-icon blue">📦</div>
+          <span class="metric-trend trend-up">+2 new</span>
+        </div>
+        <div class="metric-value" id="m-products">—</div>
+        <div class="metric-label">Total Products</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <div class="metric-icon green">📊</div>
+          <span class="metric-trend trend-flat">2 warehouses</span>
+        </div>
+        <div class="metric-value" id="m-stock">—</div>
+        <div class="metric-label">Total Stock Units</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <div class="metric-icon amber">⚠️</div>
+          <span class="metric-trend trend-down">Needs reorder</span>
+        </div>
+        <div class="metric-value" id="m-low" style="color:var(--warning)">—</div>
+        <div class="metric-label">Low Stock Items</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <div class="metric-icon blue">🚚</div>
+          <span class="metric-trend trend-flat">Pending</span>
+        </div>
+        <div class="metric-value" id="m-orders" style="color:var(--accent)">—</div>
+        <div class="metric-label">Open Orders</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid-2 mb-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📈 Stock by Category</div>
+        </div>
+        <div style="padding:20px">
+          <canvas id="catChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🏭 Stock by Warehouse</div>
+        </div>
+        <div style="padding:20px">
+          <canvas id="whChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⚠️ Low Stock Alerts</div>
+          <a href="stock.html" class="btn btn-ghost btn-sm">View all</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Product</th><th>Stock</th><th>Reorder At</th><th>Status</th></tr></thead>
+            <tbody id="low-stock-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🚚 Recent Orders</div>
+          <a href="orders.html" class="btn btn-ghost btn-sm">View all</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>PO #</th><th>Supplier</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="orders-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="data.js"></script>
+<script>
+document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Metrics
+const totalStock = STOCK.reduce((s,x)=>s+x.quantity,0);
+const lowItems = PRODUCTS.filter(p=>{
+  const s = STOCK.filter(x=>x.product_id===p.product_id).reduce((a,b)=>a+b.quantity,0);
+  return s <= p.reorder_level;
+});
+const openOrders = PURCHASE_ORDERS.filter(o=>o.status==='Pending'||o.status==='Approved');
+
+document.getElementById('m-products').textContent = PRODUCTS.length;
+document.getElementById('m-stock').textContent = totalStock.toLocaleString();
+document.getElementById('m-low').textContent = lowItems.length;
+document.getElementById('m-orders').textContent = openOrders.length;
+
+// Category chart
+const catTotals = {};
+PRODUCTS.forEach(p=>{
+  const cat = CATEGORIES.find(c=>c.category_id===p.category_id)?.category_name||'Other';
+  const qty = STOCK.filter(s=>s.product_id===p.product_id).reduce((a,b)=>a+b.quantity,0);
+  catTotals[cat] = (catTotals[cat]||0)+qty;
+});
+
+new Chart(document.getElementById('catChart'),{
+  type:'bar',
+  data:{
+    labels:Object.keys(catTotals),
+    datasets:[{data:Object.values(catTotals),backgroundColor:'rgba(79,142,247,0.7)',borderRadius:6,borderSkipped:false}]
+  },
+  options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555e7a'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#555e7a'},grid:{color:'rgba(255,255,255,0.04)'}}},responsive:true}
+});
+
+// Warehouse chart
+const whTotals = {};
+WAREHOUSES.forEach(w=>{ whTotals[w.warehouse_name]=0; });
+STOCK.forEach(s=>{
+  const w = WAREHOUSES.find(x=>x.warehouse_id===s.warehouse_id);
+  if(w) whTotals[w.warehouse_name]+=s.quantity;
+});
+
+new Chart(document.getElementById('whChart'),{
+  type:'doughnut',
+  data:{
+    labels:Object.keys(whTotals),
+    datasets:[{data:Object.values(whTotals),backgroundColor:['rgba(79,142,247,0.8)','rgba(61,214,140,0.8)'],borderWidth:0}]
+  },
+  options:{plugins:{legend:{labels:{color:'#9198b0'}}},responsive:true,cutout:'65%'}
+});
+
+// Low stock table
+document.getElementById('low-stock-body').innerHTML = lowItems.slice(0,5).map(p=>{
+  const qty = STOCK.filter(s=>s.product_id===p.product_id).reduce((a,b)=>a+b.quantity,0);
+  const status = qty===0 ? '<span class="badge badge-out">Out</span>' : '<span class="badge badge-low">Low</span>';
+  return `<tr><td>${p.product_name}</td><td>${qty}</td><td>${p.reorder_level}</td><td>${status}</td></tr>`;
+}).join('') || '<tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px">All stock levels OK ✓</td></tr>';
+
+// Orders table
+document.getElementById('orders-body').innerHTML = PURCHASE_ORDERS.slice(0,5).map(o=>{
+  const sup = SUPPLIERS.find(s=>s.supplier_id===o.supplier_id)?.company_name||'—';
+  const cls = o.status==='Approved'?'approved':o.status==='Received'?'received':o.status==='Cancelled'?'cancelled':'pending';
+  return `<tr><td class="mono">#PO-00${o.po_id}</td><td>${sup}</td><td>$${o.total_amount.toLocaleString()}</td><td><span class="badge badge-${cls}">${o.status}</span></td></tr>`;
+}).join('');
+</script>
+</body>
+</html>

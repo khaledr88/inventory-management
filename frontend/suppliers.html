@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suppliers — InvMS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">📦</div>
+      <div><div class="brand-name">InvMS</div><div class="brand-sub">COMP344</div></div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="index.html" class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="products.html" class="nav-link"><span class="icon">📦</span> Products</a>
+    <a href="stock.html" class="nav-link"><span class="icon">🏭</span> Stock</a>
+    <div class="nav-section">Procurement</div>
+    <a href="orders.html" class="nav-link"><span class="icon">🚚</span> Purchase Orders</a>
+    <a href="suppliers.html" class="nav-link active"><span class="icon">🏢</span> Suppliers</a>
+    <div class="nav-section">Admin</div>
+    <a href="users.html" class="nav-link"><span class="icon">👥</span> Users & Roles</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">AA</div>
+      <div><div class="user-name">Alice Admin</div><div class="user-role">Administrator</div></div>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Suppliers</div>
+      <div class="page-sub">Manage your vendor relationships</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openModal()">+ Add Supplier</button>
+    </div>
+  </div>
+  <div class="content page-enter">
+    <div class="grid-3 mb-6" id="supplier-cards"></div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🏢 Supplier — Product Links</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Supplier</th><th>Product</th><th>Supply Price</th><th>Lead Time</th><th>Preferred</th></tr></thead>
+          <tbody id="ps-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Supplier</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Company Name</label><input type="text" id="f-name" placeholder="e.g. TechSupply Co."></div>
+        <div class="form-group"><label class="form-label">Contact Name</label><input type="text" id="f-contact" placeholder="e.g. John Smith"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Email</label><input type="email" id="f-email" placeholder="contact@company.com"></div>
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" id="f-phone" placeholder="+1-800-0000"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Country</label><input type="text" id="f-country" placeholder="e.g. USA"></div>
+        <div class="form-group"><label class="form-label">Address</label><input type="text" id="f-address" placeholder="Street, City"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addSupplier()">Add Supplier</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+function renderSuppliers(){
+  document.getElementById('supplier-cards').innerHTML = SUPPLIERS.map(s=>{
+    const orders = PURCHASE_ORDERS.filter(o=>o.supplier_id===s.supplier_id).length;
+    const initials = s.company_name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="card" style="padding:20px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div class="avatar" style="width:40px;height:40px;font-size:14px;border-radius:10px;background:var(--bg4)">${initials}</div>
+        <div>
+          <div style="font-weight:500;font-size:14px">${s.company_name}</div>
+          <div class="text-muted">${s.country}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">👤 ${s.contact_name}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">📧 ${s.email}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">${orders} purchase order${orders!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPS(){
+  document.getElementById('ps-tbody').innerHTML = PRODUCTS.flatMap(p=>
+    SUPPLIERS.filter((s,i)=>i % 2 === (p.product_id % 2)).map(s=>({
+      sup: s.company_name,
+      prod: p.product_name,
+      sku: p.SKU,
+      price: (p.unit_price * 0.85).toFixed(2),
+      lead: Math.floor(Math.random()*10+2),
+      preferred: p.product_id % 3 === 0
+    }))
+  ).slice(0,10).map(r=>`<tr>
+    <td>${r.sup}</td>
+    <td>${r.prod}</td>
+    <td>$${r.price}</td>
+    <td>${r.lead} days</td>
+    <td>${r.preferred?'<span class="badge badge-ok">✓ Yes</span>':'<span class="badge" style="background:var(--bg3);color:var(--text3)">No</span>'}</td>
+  </tr>`).join('');
+}
+
+function openModal(){ document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+function addSupplier(){
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){ alert('Company name is required'); return; }
+  SUPPLIERS.push({
+    supplier_id: SUPPLIERS.length+1,
+    company_name: name,
+    contact_name: document.getElementById('f-contact').value,
+    email: document.getElementById('f-email').value,
+    country: document.getElementById('f-country').value
+  });
+  renderSuppliers();
+  closeModal();
+}
+
+renderSuppliers();
+renderPS();
+</script>
+</body>
+</html>

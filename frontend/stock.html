@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock — InvMS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">📦</div>
+      <div><div class="brand-name">InvMS</div><div class="brand-sub">COMP344</div></div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="index.html" class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="products.html" class="nav-link"><span class="icon">📦</span> Products</a>
+    <a href="stock.html" class="nav-link active"><span class="icon">🏭</span> Stock</a>
+    <div class="nav-section">Procurement</div>
+    <a href="orders.html" class="nav-link"><span class="icon">🚚</span> Purchase Orders</a>
+    <a href="suppliers.html" class="nav-link"><span class="icon">🏢</span> Suppliers</a>
+    <div class="nav-section">Admin</div>
+    <a href="users.html" class="nav-link"><span class="icon">👥</span> Users & Roles</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">AA</div>
+      <div><div class="user-name">Alice Admin</div><div class="user-role">Administrator</div></div>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Stock</div>
+      <div class="page-sub">Real-time inventory levels across all warehouses</div>
+    </div>
+    <div class="topbar-actions">
+      <select id="wh-filter" onchange="renderStock()" style="width:180px">
+        <option value="0">All Warehouses</option>
+      </select>
+    </div>
+  </div>
+  <div class="content page-enter">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🏭 Stock Summary</div>
+        <span class="text-muted" id="stock-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>SKU</th><th>Product</th><th>Category</th><th>Warehouse</th><th>Quantity</th><th>Reorder At</th><th>Status</th></tr>
+          </thead>
+          <tbody id="stock-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="data.js"></script>
+<script>
+WAREHOUSES.forEach(w=>{ document.getElementById('wh-filter').innerHTML += `<option value="${w.warehouse_id}">${w.warehouse_name}</option>`; });
+
+function renderStock(){
+  const whId = parseInt(document.getElementById('wh-filter').value)||0;
+  const rows = STOCK.filter(s=>!whId||s.warehouse_id===whId).map(s=>{
+    const p = PRODUCTS.find(x=>x.product_id===s.product_id);
+    const w = WAREHOUSES.find(x=>x.warehouse_id===s.warehouse_id);
+    const cat = CATEGORIES.find(c=>c.category_id===p?.category_id)?.category_name||'—';
+    const status = s.quantity===0?'<span class="badge badge-out">Out</span>':s.quantity<=p?.reorder_level?'<span class="badge badge-low">Low</span>':'<span class="badge badge-ok">OK</span>';
+    return `<tr>
+      <td class="mono">${p?.SKU||'—'}</td>
+      <td style="font-weight:500">${p?.product_name||'—'}</td>
+      <td>${cat}</td>
+      <td>${w?.warehouse_name||'—'}</td>
+      <td><strong>${s.quantity}</strong></td>
+      <td>${p?.reorder_level||'—'}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+  document.getElementById('stock-count').textContent = rows.length + ' entries';
+  document.getElementById('stock-tbody').innerHTML = rows.join('');
+}
+renderStock();
+</script>
+</body>
+</html>

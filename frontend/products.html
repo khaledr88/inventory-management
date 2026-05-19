@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — InvMS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">📦</div>
+      <div><div class="brand-name">InvMS</div><div class="brand-sub">COMP344</div></div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="index.html" class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="products.html" class="nav-link active"><span class="icon">📦</span> Products</a>
+    <a href="stock.html" class="nav-link"><span class="icon">🏭</span> Stock</a>
+    <div class="nav-section">Procurement</div>
+    <a href="orders.html" class="nav-link"><span class="icon">🚚</span> Purchase Orders</a>
+    <a href="suppliers.html" class="nav-link"><span class="icon">🏢</span> Suppliers</a>
+    <div class="nav-section">Admin</div>
+    <a href="users.html" class="nav-link"><span class="icon">👥</span> Users & Roles</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">AA</div>
+      <div><div class="user-name">Alice Admin</div><div class="user-role">Administrator</div></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Products</div>
+      <div class="page-sub">Manage your product catalog</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search by name or SKU…" oninput="filterProducts(this.value)" id="search">
+      </div>
+      <select id="cat-filter" onchange="filterProducts(document.getElementById('search').value)" style="width:160px">
+        <option value="">All Categories</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
+    </div>
+  </div>
+
+  <div class="content page-enter">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📦 Product Catalog</div>
+        <span class="text-muted" id="count-label"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Unit Price</th>
+              <th>Total Stock</th>
+              <th>Reorder At</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="product-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New Product</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input type="text" id="f-name" placeholder="e.g. Cisco Switch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">SKU</label>
+          <input type="text" id="f-sku" placeholder="e.g. NET-SW-001">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="f-cat"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Price ($)</label>
+          <input type="number" id="f-price" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Reorder Level</label>
+          <input type="number" id="f-reorder" placeholder="10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit</label>
+          <select id="f-unit">
+            <option>piece</option><option>unit</option><option>roll</option><option>license</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea id="f-desc" rows="2" placeholder="Optional description…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// Populate category filter
+CATEGORIES.forEach(c=>{
+  document.getElementById('cat-filter').innerHTML += `<option value="${c.category_id}">${c.category_name}</option>`;
+  document.getElementById('f-cat').innerHTML += `<option value="${c.category_id}">${c.category_name}</option>`;
+});
+
+function getStock(pid){ return STOCK.filter(s=>s.product_id===pid).reduce((a,b)=>a+b.quantity,0); }
+
+function statusBadge(qty, reorder){
+  if(qty===0) return '<span class="badge badge-out">Out of stock</span>';
+  if(qty<=reorder) return '<span class="badge badge-low">Low stock</span>';
+  return '<span class="badge badge-ok">In stock</span>';
+}
+
+function renderProducts(list){
+  document.getElementById('count-label').textContent = list.length + ' products';
+  document.getElementById('product-tbody').innerHTML = list.length ? list.map(p=>{
+    const cat = CATEGORIES.find(c=>c.category_id===p.category_id)?.category_name||'—';
+    const qty = getStock(p.product_id);
+    return `<tr>
+      <td class="mono">${p.SKU}</td>
+      <td style="font-weight:500">${p.product_name}</td>
+      <td>${cat}</td>
+      <td>$${p.unit_price.toFixed(2)}</td>
+      <td>${qty}</td>
+      <td>${p.reorder_level}</td>
+      <td>${statusBadge(qty, p.reorder_level)}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" onclick="editProduct(${p.product_id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.product_id})">Delete</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8"><div class="empty-state"><div class="icon">📦</div><p>No products found</p></div></td></tr>';
+}
+
+function filterProducts(q){
+  const cat = parseInt(document.getElementById('cat-filter').value)||0;
+  const term = q.toLowerCase();
+  renderProducts(PRODUCTS.filter(p=>
+    (!cat || p.category_id===cat) &&
+    (p.product_name.toLowerCase().includes(term) || p.SKU.toLowerCase().includes(term))
+  ));
+}
+
+renderProducts(PRODUCTS);
+
+function openModal(){ document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+function addProduct(){
+  const name = document.getElementById('f-name').value.trim();
+  const sku  = document.getElementById('f-sku').value.trim();
+  if(!name||!sku){ alert('Name and SKU are required'); return; }
+  const newP = {
+    product_id: PRODUCTS.length+1,
+    category_id: parseInt(document.getElementById('f-cat').value),
+    product_name: name,
+    SKU: sku,
+    unit_price: parseFloat(document.getElementById('f-price').value)||0,
+    reorder_level: parseInt(document.getElementById('f-reorder').value)||10
+  };
+  PRODUCTS.push(newP);
+  renderProducts(PRODUCTS);
+  closeModal();
+}
+
+function deleteProduct(id){
+  if(!confirm('Delete this product?')) return;
+  const i = PRODUCTS.findIndex(p=>p.product_id===id);
+  if(i>-1){ PRODUCTS.splice(i,1); renderProducts(PRODUCTS); }
+}
+
+function editProduct(id){
+  alert('Edit feature — connect to backend API to update product #'+id);
+}
+</script>
+</body>
+</html>
